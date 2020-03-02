@@ -3,6 +3,12 @@
 import socket
 import json
 import struct
+import ssl
+
+TOKEN = 'TOKEN GOES HERE!'
+LOBBY = 'robot_game:practice'
+HOST = b'app.botskrieg.com'
+PORT = 4242
 
 def send_message(socket, msg):
     msg_bytes = str.encode(json.dumps(msg))
@@ -15,12 +21,15 @@ def recieve_message(socket):
     message = socket.recv(msg_size)
     return message
 
-socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-socket.connect(('localhost', 4001))
+context = ssl.create_default_context()
 
-send_message(socket, {'token': '2goiwcgmljrkuafvgml2klmtqymfebso', 'lobby': 'foo'})
+connection = socket.create_connection((HOST, PORT))
+socket = context.wrap_socket(connection, server_hostname=HOST)
+
+send_message(socket, {'token': TOKEN, 'lobby': LOBBY})
 msg = recieve_message(socket)
 connection_message = json.loads(msg)
+print(repr(connection_message))
 print("bot_id:", connection_message["bot_id"])
 print("connection_id:", connection_message["connection_id"])
 
