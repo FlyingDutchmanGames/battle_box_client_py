@@ -5,7 +5,7 @@ import json
 import struct
 import ssl
 
-TOKEN = 'TOKEN GOES HERE!'
+TOKEN = '4egpgtuomne65bs3yk7mqxosadhf2sid'
 LOBBY = 'robot_game:practice'
 HOST = b'app.botskrieg.com'
 PORT = 4242
@@ -30,7 +30,6 @@ send_message(socket, {'token': TOKEN, 'lobby': LOBBY})
 msg = recieve_message(socket)
 connection_message = json.loads(msg)
 print(repr(connection_message))
-print("bot_id:", connection_message["bot_id"])
 print("connection_id:", connection_message["connection_id"])
 
 send_message(socket, {'action': 'start_match_making'})
@@ -49,8 +48,8 @@ send_message(socket, {"action": "accept_game", "game_id": decoded["game_info"]["
 for i in range(0, 100):
     msg = recieve_message(socket)
     decoded = json.loads(msg)
-    print(i, ": Recieved Request:", decoded["request_type"], "moves_request_id", decoded["moves_request"]["request_id"])
-    send_message(socket, {"action": "send_moves", "request_id": decoded["moves_request"]["request_id"], "moves": []})
+    print(i, ": Recieved Request:", decoded["request_type"], "commands_request_id", decoded["commands_request"]["request_id"])
+    send_message(socket, {"action": "send_commands", "request_id": decoded["commands_request"]["request_id"], "commands": []})
 
 msg = recieve_message(socket)
 decoded = json.loads(msg)
