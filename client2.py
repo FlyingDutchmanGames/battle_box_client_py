@@ -104,21 +104,26 @@ class Bot:
 class RobotGameBot(Bot):
     DEFAULT_ARENA = "robot-game-default"
 
-    @classmethod
-    def guard(cls, robot):
-        return {"type": "guard", "robot_id": robot["id"]}
+    class Robot:
+        def __init__(self, robot):
+            self.location = robot["location"]
+            self.id = robot["id"]
+            self.player_id = robot["player_id"]
 
-    @classmethod
-    def explode(cls, robot):
-        return {"type": "explode", "robot_id": robot["id"]}
+        def guard(self):
+            return {"type": "guard", "robot_id": self.id}
 
-    @classmethod
-    def move(cls, robot, target):
-        return {"type": "move", "robot_id": robot["id"], "target": target}
+        def explode(self):
+            return {"type": "explode", "robot_id": self.id}
 
-    @classmethod
-    def attack(cls, robot, target):
-        return {"type": "attack", "robot_id": robot["id"], "target": target}
+        def move(self, target):
+            return {"type": "move", "robot_id": self.id, "target": target}
+
+        def attack(self, target):
+            return {"type": "attack", "robot_id": self.id, "target": target}
+
+        def __repr__(self):
+            return f"Robot(id={self.id}, location={self.location}, player_id={self.player_id})"
 
     def process_game_request(self, game_request):
         print(game_request)
@@ -130,12 +135,12 @@ class RobotGameBot(Bot):
         print(commands_request)
         player = commands_request["player"]
         robots = commands_request["game_state"]["robots"]
-        my_robots = [robot for robot in robots if robot["player_id"] == player]
-        enemy_robots = [robot for robot in robots if robot["player_id"] != player]
+        my_robots = [self.Robot(robot) for robot in robots if robot["player_id"] == player]
+        enemy_robots = [self.Robot(robot) for robot in robots if robot["player_id"] != player]
         return {"player": player, "robots": robots, "my_robots": my_robots, "enemy_robots": enemy_robots}
 
 class ShelterInPlace(RobotGameBot):
     NAME = "shelter-in-place"
 
     def commands(self, commands_request, settings):
-        return [self.guard(robot) for robot in commands_request["my_robots"]]
+        return [robot.guard() for robot in commands_request["my_robots"]]
