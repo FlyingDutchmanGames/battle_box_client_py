@@ -29,8 +29,6 @@ def load_key(domain):
         raise ValueError(LOAD_KEY_ERROR_MSG)
 
 
-# WIRE PROTOCOL
-
 class BattleBoxConnection:
     def __init__(self, uri, key, arena, bot):
         parsed_uri = urllib.parse.urlparse(uri)
@@ -56,15 +54,13 @@ class BattleBoxConnection:
         message = json.loads(message)
         return message
 
-# BOTS
-
 class Bot:
     NAME="unnamed"
 
     def __init__(self, **options):
         self.uri = options.get("uri", "battlebox://botskrieg.com:4242")
         hostname = urllib.parse.urlparse(self.uri).hostname
-        self.key = load_key(hostname)
+        self.key = options.get("key") or load_key(hostname)
         self.bot = self.NAME
         self.arena = options.get("arena", self.DEFAULT_ARENA)
         self.connection = BattleBoxConnection(self.uri, self.key, self.arena, self.bot)
@@ -104,6 +100,20 @@ class Bot:
 class RobotGameBot(Bot):
     DEFAULT_ARENA = "robot-game-default"
 
+    class Terrain:
+        def __init__(self, terrain_base64):
+            terrain = base64.b64decode(terrain_base64)
+            self.rows = terrain[0]
+            self.cols = terrain[1]
+            self.terrain_data = terrain[2:]
+
+        def at(self, location):
+            [x, y] = location
+            return self.terrain_data[(y * self.cols) + x]
+
+        def __repr__(self):
+            return f"Terrain(rows={self.rows}, cols={self.cols})"
+
     class Robot:
         def __init__(self, robot):
             self.location = robot["location"]
@@ -126,9 +136,8 @@ class RobotGameBot(Bot):
             return f"Robot(id={self.id}, location={self.location}, player_id={self.player_id})"
 
     def process_game_request(self, game_request):
-        print(game_request)
         settings = game_request["game_info"]["settings"]
-        settings["terrain"] = base64.b64decode(settings["terrain_base64"])
+        settings["terrain"] = self.Terrain(settings["terrain_base64"])
         return settings
 
     def process_commands_request(self, commands_request):
@@ -137,10 +146,17 @@ class RobotGameBot(Bot):
         robots = commands_request["game_state"]["robots"]
         my_robots = [self.Robot(robot) for robot in robots if robot["player_id"] == player]
         enemy_robots = [self.Robot(robot) for robot in robots if robot["player_id"] != player]
-        return {"player": player, "robots": robots, "my_robots": my_robots, "enemy_robots": enemy_robots}
+        return {
+            "player": player,
+            "robots": robots,
+            "my_robots": my_robots,
+            "enemy_robots": enemy_robots,
+            "turn": turn
+        }
 
-class ShelterInPlace(RobotGameBot):
-    NAME = "shelter-in-place"
+class Tortuga(RobotGameBot):
+    NAME = "tortuga"
 
     def commands(self, commands_request, settings):
         return [robot.guard() for robot in commands_request["my_robots"]]
+
