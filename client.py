@@ -1,107 +1,162 @@
-#!/usr/bin/env python3
-
-import socket
+import urllib.parse
 import json
-import struct
+import os
+import socket
 import ssl
+import struct
+import time
+import base64
 
-# Constants
-TOKEN = 'insert-my-token-here'
-LOBBY = 'robot_game:practice'
-HOST = 'app.botskrieg.com'
-PORT = 4242
+# LOAD SETTINGS
+LOAD_KEY_ERROR_MSG = """
+Unable to laod api key, this client support the following ways to load a key
+1.) Passing the BATTLE_BOX_API_KEY environment variable
+2.) Creating a file in the current directory named `./.battle_box` in the following format
+```
+{"botskrieg.com": {"token": "YOUR_TOKEN_HERE"}}
+```
+"""
 
-# Wire Protocol
-def send_message(socket, msg):
-    msg_bytes = str.encode(json.dumps(msg))
-    header = struct.pack("!H", len(msg_bytes))
-    socket.sendall(header + msg_bytes)
+def load_key(domain):
+    env = os.environ.get('BATTLE_BOX_API_KEY')
+    if env:
+        return env
+    elif os.path.isfile("./.battle_box"):
+        with open("./.battle_box") as file:
+            data = file.read()
+            return json.loads(data)[domain]["token"]
+    else:
+        raise ValueError(LOAD_KEY_ERROR_MSG)
 
-def recieve_message(socket):
-    msg_size_bytes = socket.recv(2)
-    (msg_size,) = struct.unpack("!H", msg_size_bytes)
-    message = socket.recv(msg_size)
-    return json.loads(message)
 
-def start_match_making_msg():
-    return {'action': 'start_match_making'}
+class BattleBoxConnection:
+    def __init__(self, uri, key, arena, bot):
+        parsed_uri = urllib.parse.urlparse(uri)
+        self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
+        context = ssl.create_default_context()
+        self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
+        self.send_message({'token': key, 'arena': arena, "bot": bot})
+        connection_msg = self.recieve_message()
+        if connection_msg.get("error"):
+            raise ValueError(connection_msg)
+        else:
+            self.bot_server_id = connection_msg["bot_server_id"]
 
-def accept_game_msg(game_id):
-    return {"action": "accept_game", "game_id": game_id}
+    def send_message(self, msg):
+        msg_bytes = str.encode(json.dumps(msg))
+        header = struct.pack("!H", len(msg_bytes))
+        self.socket.sendall(header + msg_bytes)
 
-def send_commands_msg(request_id,commands):
-    return {"action": "send_commands", "request_id": request_id, "commands": commands}
+    def recieve_message(self):
+        msg_size_bytes = self.socket.recv(2)
+        (msg_size,) = struct.unpack("!H", msg_size_bytes)
+        message = self.socket.recv(msg_size)
+        message = json.loads(message)
+        return message
 
-def create_guard(robot_id):
-    return {"type": "guard", "robot_id": robot_id}
+class Bot:
+    NAME="unnamed"
 
-def create_suicide(robot_id):
-    return {"type": "suicide", "robot_id": robot_id}
+    def __init__(self, **options):
+        self.uri = options.get("uri", "battlebox://botskrieg.com:4242")
+        hostname = urllib.parse.urlparse(self.uri).hostname
+        self.key = options.get("key") or load_key(hostname)
+        self.bot = self.NAME
+        self.arena = options.get("arena", self.DEFAULT_ARENA)
+        self.connection = BattleBoxConnection(self.uri, self.key, self.arena, self.bot)
 
-def create_move(robot_id, target):
-    return {"type": "move", "robot_id": robot_id, "target": target}
+    def accept_game(self, game_request):
+        game_id = game_request["game_info"]["game_id"]
+        self.connection.send_message({"action": "accept_game", "game_id": game_id})
 
-def create_attack(robot_id, target):
-    return {"type": "attack", "robot_id": robot_id, "target": target}
+    def play(self, game_request):
+        game_request = self.process_game_request(game_request)
 
-# Connect to the server
-context = ssl.create_default_context()
-connection = socket.create_connection((HOST, PORT))
-socket = context.wrap_socket(connection, server_hostname=HOST)
+        while True:
+            msg = self.connection.recieve_message()
+            if msg.get("commands_request"):
+                commands_request = self.process_commands_request(msg["commands_request"])
+                commands = self.commands(commands_request, game_request)
+                self.send_commands(msg["commands_request"]["request_id"], commands)
+            elif msg.get("info"):
+                if msg["info"] == "game_over":
+                    print(msg["result"])
 
-# Authenticate to the server
-send_message(socket, {'token': TOKEN, 'lobby': LOBBY})
-connection_message = recieve_message(socket)
-#print(connection_message)
-bot_server_id = connection_message["bot_server_id"]
-watch_bot_url = f"https://app.botskrieg.com/bot_servers/{bot_server_id}/follow"
-print("WATCH URL:", watch_bot_url)
+                break
 
-# This "while loop" starts a new game after previous... forever
-while True:
 
-    # Request to begin match making
-    send_message(socket, start_match_making_msg())
-    status = recieve_message(socket)
-    print("Status:", status["status"])
+    def send_commands(self, request_id, commands):
+        self.connection.send_message({"action": "send_commands", "request_id": request_id, "commands": commands})
 
-    game_info = recieve_message(socket)
-    print("Game Starting")
-    #print("Recieved Request:", game_info["request_type"])
-    #print("game_id:", game_info["game_info"]["game_id"])
-    player = game_info["game_info"]["player"]
-    turns = game_info["game_info"]["settings"]["max_turns"]
-    send_message(socket, accept_game_msg(game_info["game_info"]["game_id"]))
-    #print(game_info)
+    def practice(self, opponent={}):
+        self.connection.send_message({"action": "practice", "opponent": opponent})
+        status = self.connection.recieve_message()
+        assert status["status"] == "match_making"
+        game_request = self.connection.recieve_message()
+        self.accept_game(game_request)
+        self.play(game_request)
 
-    # This "for loop" is the section that will be called each turn
-    for turn in range(0, turns):
-        command_request = recieve_message(socket)
-        # Create an emtpy array that will be filled with commands that are created
-        commands = []
-        #print(command_request)
-        # Define all robots
-        robots = command_request['commands_request']['game_state']['robots']
-        # Specify which of the robots are mine
-        my_robots = [robot for robot in robots if robot['player_id'] == player]
-            
-        # This "for loop" will run for each individual robot I control
-        for robot in my_robots:
-            # Specifiy where a robot is
-            [row,column] = robot["location"]
-            # Define the command for each robot
-            target = [row+1, column]
-            command = create_move(robot['id'], target)
 
-            # Add this command to the array of commands you will be sending
-            commands.append(command)
-            # Print the turn and command information on the console
-            #print("TURN:", turn,"COMMAND:", command)
+class RobotGameBot(Bot):
+    DEFAULT_ARENA = "robot-game-default"
 
-        # Send commands to the server
-        msg = send_commands_msg(command_request['commands_request']['request_id'], commands)
-        send_message(socket, msg)
+    class Terrain:
+        def __init__(self, terrain_base64):
+            terrain = base64.b64decode(terrain_base64)
+            self.rows = terrain[0]
+            self.cols = terrain[1]
+            self.terrain_data = terrain[2:]
 
-    game_result = recieve_message(socket)
-    print("Game Over:", game_result["info"])
-    print("Result: ", game_result["result"]["score"])
+        def at(self, location):
+            [x, y] = location
+            return self.terrain_data[(y * self.cols) + x]
+
+        def __repr__(self):
+            return f"Terrain(rows={self.rows}, cols={self.cols})"
+
+    class Robot:
+        def __init__(self, robot):
+            self.location = robot["location"]
+            self.id = robot["id"]
+            self.player_id = robot["player_id"]
+
+        def guard(self):
+            return {"type": "guard", "robot_id": self.id}
+
+        def explode(self):
+            return {"type": "explode", "robot_id": self.id}
+
+        def move(self, target):
+            return {"type": "move", "robot_id": self.id, "target": target}
+
+        def attack(self, target):
+            return {"type": "attack", "robot_id": self.id, "target": target}
+
+        def __repr__(self):
+            return f"Robot(id={self.id}, location={self.location}, player_id={self.player_id})"
+
+    def process_game_request(self, game_request):
+        settings = game_request["game_info"]["settings"]
+        settings["terrain"] = self.Terrain(settings["terrain_base64"])
+        return settings
+
+    def process_commands_request(self, commands_request):
+        print(commands_request)
+        player = commands_request["player"]
+        robots = commands_request["game_state"]["robots"]
+        my_robots = [self.Robot(robot) for robot in robots if robot["player_id"] == player]
+        enemy_robots = [self.Robot(robot) for robot in robots if robot["player_id"] != player]
+        return {
+            "player": player,
+            "robots": robots,
+            "my_robots": my_robots,
+            "enemy_robots": enemy_robots,
+            "turn": commands_request["game_state"]["turn"]
+        }
+
+class Tortuga(RobotGameBot):
+    NAME = "tortuga"
+
+    def commands(self, commands_request, settings):
+        return [robot.guard() for robot in commands_request["my_robots"]]
+
