@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="battle-box-client-py-Grant-James-Powell",
+    name="battle_box_client",
     version="0.0.1",
     author="Grant Powell",
     description="Battle Box Client",
