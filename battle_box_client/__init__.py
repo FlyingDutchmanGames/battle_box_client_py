@@ -1,2 +1,1 @@
-from .client import RobotGameBot
-from .examples import Tortuga
+from client import *
