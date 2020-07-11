@@ -141,7 +141,6 @@ class RobotGameBot(Bot):
         return settings
 
     def process_commands_request(self, commands_request):
-        print(commands_request)
         player = commands_request["player"]
         robots = commands_request["game_state"]["robots"]
         my_robots = [self.Robot(robot) for robot in robots if robot["player_id"] == player]
