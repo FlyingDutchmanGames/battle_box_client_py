@@ -30,12 +30,12 @@ def load_key(domain):
 
 
 class BattleBoxConnection:
-    def __init__(self, uri, key, arena, bot):
+    def __init__(self, uri, key, bot):
         parsed_uri = urllib.parse.urlparse(uri)
         self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
         context = ssl.create_default_context()
         self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
-        self.send_message({'token': key, 'arena': arena, "bot": bot})
+        self.send_message({'token': key, "bot": bot})
         connection_msg = self.recieve_message()
         if connection_msg.get("error"):
             raise ValueError(connection_msg)
@@ -62,8 +62,7 @@ class Bot:
         hostname = urllib.parse.urlparse(self.uri).hostname
         self.key = options.get("key") or load_key(hostname)
         self.bot = self.NAME
-        self.arena = options.get("arena", self.DEFAULT_ARENA)
-        self.connection = BattleBoxConnection(self.uri, self.key, self.arena, self.bot)
+        self.connection = BattleBoxConnection(self.uri, self.key, self.bot)
 
     def accept_game(self, game_request):
         game_id = game_request["game_info"]["game_id"]
@@ -88,8 +87,10 @@ class Bot:
     def send_commands(self, request_id, commands):
         self.connection.send_message({"action": "send_commands", "request_id": request_id, "commands": commands})
 
-    def practice(self, opponent={}):
-        self.connection.send_message({"action": "practice", "opponent": opponent})
+    def practice(self, options):
+        arena = options.get("arena", self.DEFAULT_ARENA)
+        opponent = options.get("opponent", {})
+        self.connection.send_message({"action": "practice", "opponent": opponent, "arena": arena})
         status = self.connection.recieve_message()
         assert status["status"] == "match_making"
         game_request = self.connection.recieve_message()
