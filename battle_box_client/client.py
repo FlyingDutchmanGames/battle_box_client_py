@@ -33,8 +33,11 @@ class BattleBoxConnection:
     def __init__(self, uri, key, bot):
         parsed_uri = urllib.parse.urlparse(uri)
         self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
-        context = ssl.create_default_context()
-        self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
+
+        if parsed_uri.scheme in ["battleboxs", "https"]:
+            context = ssl.create_default_context()
+            self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
+
         self.send_message({'token': key, "bot": bot})
         connection_msg = self.recieve_message()
         if connection_msg.get("error"):
@@ -58,9 +61,9 @@ class Bot:
     NAME="unnamed"
 
     def __init__(self, **options):
-        self.uri = options.get("uri", "battlebox://botskrieg.com:4242")
+        self.uri = options.get("uri", "battleboxs://botskrieg.com:4242")
         hostname = urllib.parse.urlparse(self.uri).hostname
-        self.key = options.get("key") or load_key(hostname)
+        self.key = options.get("token") or load_key(hostname)
         self.bot = self.NAME
         self.connection = BattleBoxConnection(self.uri, self.key, self.bot)
 
@@ -87,7 +90,7 @@ class Bot:
     def send_commands(self, request_id, commands):
         self.connection.send_message({"action": "send_commands", "request_id": request_id, "commands": commands})
 
-    def practice(self, options):
+    def practice(self, **options):
         arena = options.get("arena", self.DEFAULT_ARENA)
         opponent = options.get("opponent", {})
         self.connection.send_message({"action": "practice", "opponent": opponent, "arena": arena})
