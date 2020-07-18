@@ -7,6 +7,9 @@ import struct
 import time
 import base64
 
+class BattleBoxError(Exception):
+    pass
+
 # LOAD SETTINGS
 LOAD_KEY_ERROR_MSG = """
 Unable to laod api key, this client support the following ways to load a key
@@ -95,6 +98,8 @@ class Bot:
         opponent = options.get("opponent", {})
         self.connection.send_message({"action": "practice", "opponent": opponent, "arena": arena})
         status = self.connection.recieve_message()
+        if status.get("error"):
+            raise BattleBoxError(status["error"])
         assert status["status"] == "match_making"
         game_request = self.connection.recieve_message()
         self.accept_game(game_request)
