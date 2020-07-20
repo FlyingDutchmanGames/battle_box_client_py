@@ -83,6 +83,8 @@ class Bot:
                 commands_request = self.process_commands_request(msg["commands_request"])
                 commands = self.commands(commands_request, game_request)
                 self.send_commands(msg["commands_request"]["request_id"], commands)
+            elif msg.get("error") == "invalid_commands_submission":
+                print("Failed to send commands in time for request_id: {}".format(msg["request_id"]))
             elif msg.get("info"):
                 if msg["info"] == "game_over":
                     print(msg["result"])
