@@ -33,7 +33,7 @@ def load_key(domain):
 
 
 class BattleBoxConnection:
-    def __init__(self, uri, key, bot):
+    def connect(self, uri, key, bot):
         parsed_uri = urllib.parse.urlparse(uri)
         self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
 
@@ -42,7 +42,8 @@ class BattleBoxConnection:
             self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
 
         self.send_message({'token': key, "bot": bot})
-        connection_msg = self.recieve_message()
+        connection_msg = self.receive_message()
+
         if connection_msg.get("error"):
             raise ValueError(connection_msg)
         else:
@@ -53,7 +54,7 @@ class BattleBoxConnection:
         header = struct.pack("!H", len(msg_bytes))
         self.socket.sendall(header + msg_bytes)
 
-    def recieve_message(self):
+    def receive_message(self):
         msg_size_bytes = self.socket.recv(2)
         (msg_size,) = struct.unpack("!H", msg_size_bytes)
         message = self.socket.recv(msg_size)
@@ -68,7 +69,8 @@ class Bot:
         hostname = urllib.parse.urlparse(self.uri).hostname
         self.key = options.get("token") or load_key(hostname)
         self.bot = self.NAME
-        self.connection = BattleBoxConnection(self.uri, self.key, self.bot)
+        self.connection = options.get("connection") or BattleBoxConnection()
+        self.connection.connect(self.uri, self.key, self.bot)
 
     def accept_game(self, game_request):
         game_id = game_request["game_info"]["game_id"]
@@ -78,7 +80,7 @@ class Bot:
         game_request = self.process_game_request(game_request)
 
         while True:
-            msg = self.connection.recieve_message()
+            msg = self.connection.receive_message()
             if msg.get("commands_request"):
                 commands_request = self.process_commands_request(msg["commands_request"])
                 commands = self.commands(commands_request, game_request)
@@ -99,11 +101,11 @@ class Bot:
         arena = options.get("arena", self.DEFAULT_ARENA)
         opponent = options.get("opponent", {})
         self.connection.send_message({"action": "practice", "opponent": opponent, "arena": arena})
-        status = self.connection.recieve_message()
+        status = self.connection.receive_message()
         if status.get("error"):
             raise BattleBoxError(status["error"])
         assert status["status"] == "match_making"
-        game_request = self.connection.recieve_message()
+        game_request = self.connection.receive_message()
         self.accept_game(game_request)
         self.play(game_request)
 
@@ -120,7 +122,8 @@ class RobotGameBot(Bot):
 
         def at(self, location):
             [x, y] = location
-            return self.terrain_data[(y * self.cols) + x]
+            terrain_type = self.terrain_data[(y * self.cols) + x]
+            return {0: "inacessible", 1: "normal", 2: "spawn"}[terrain_type]
 
         def __repr__(self):
             return f"Terrain(rows={self.rows}, cols={self.cols})"
