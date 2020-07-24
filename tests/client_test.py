@@ -108,12 +108,30 @@ class RobotGameRobotTest(unittest.TestCase):
         self.assertEqual({'robot_id': 1, 'target': [1, 1], 'type': 'attack'}, robot.attack([1,1]))
 
 class RobotGameTerrainTest(unittest.TestCase):
-    def test_at(self):
-        terrain_base64 = base64.b64encode(bytes([2, 2, 0, 1, 2, 0]))
+    def test_at_location_outside_of_terrain(self):
+        terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
         terrain = RobotGameBot.Terrain(terrain_base64)
-        self.assertEqual(terrain.at([0, 0]), "inacessible")
-        self.assertEqual(terrain.at([1, 0]), "spawn")
-        self.assertEqual(terrain.at([0, 1]), "normal")
+        self.assertEqual(terrain.at_location([0, 0]), "normal")
+        self.assertEqual(terrain.at_location([10, 10]), "inacessible")
+
+    def test_at_location(self):
+        terrain_base64 = base64.b64encode(bytes([2, 2, 0, 0, 1, 0]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        self.assertEqual(terrain.rows, 2)
+        self.assertEqual(terrain.cols, 2)
+        self.assertEqual(terrain.at_location([0, 0]), "inacessible")
+        self.assertEqual(terrain.at_location([0, 1]), "normal")
+        self.assertEqual(terrain.at_location([1, 0]), "inacessible")
+        self.assertEqual(terrain.at_location([1, 1]), "inacessible")
+
+        terrain_base64 = base64.b64encode(bytes([1, 4, 0, 1, 2, 0]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        self.assertEqual(terrain.rows, 1)
+        self.assertEqual(terrain.cols, 4)
+        self.assertEqual(terrain.at_location([0, 0]), "inacessible")
+        self.assertEqual(terrain.at_location([1, 0]), "normal")
+        self.assertEqual(terrain.at_location([2, 0]), "spawn")
+        self.assertEqual(terrain.at_location([3, 0]), "inacessible")
 
 if __name__ == '__main__':
     unittest.main()

@@ -109,10 +109,18 @@ class RobotGameBot(Bot):
             self.cols = terrain[1]
             self.terrain_data = terrain[2:]
 
-        def at(self, location):
+        def at_location(self, location):
             [x, y] = location
-            terrain_type = self.terrain_data[(y * self.cols) + x]
-            return {0: "inacessible", 1: "normal", 2: "spawn"}[terrain_type]
+            if (x not in range(self.cols)) or (y not in range(self.rows)):
+                return "inacessible"
+            else:
+                offset = x + (y * self.cols) 
+                terrain_type = self.terrain_data[offset]
+                return {
+                    0: "inacessible",
+                    1: "normal",
+                    2: "spawn"
+                }[terrain_type]
 
         def __repr__(self):
             return f"Terrain(rows={self.rows}, cols={self.cols})"
