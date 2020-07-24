@@ -108,6 +108,33 @@ class RobotGameRobotTest(unittest.TestCase):
         self.assertEqual({'robot_id': 1, 'target': [1, 1], 'type': 'attack'}, robot.attack([1,1]))
 
 class RobotGameTerrainTest(unittest.TestCase):
+    def test_manhattan_distance(self):
+        terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        test_cases = [
+            ([0, 0], [0,  0], 0.0),
+            ([0, 0], [0,  1], 1.0),
+            ([0, 0], [0, -1], 1.0),
+            ([0, 0], [3,  4], 5.0)
+        ]
+
+        for (loc1, loc2, expected) in test_cases:
+            self.assertEqual(terrain.manhattan_distance(loc1, loc2), expected)
+
+    def test_towards(self):
+        terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        test_cases = [
+            ([0, 0], [0, 1], [0, 1]),
+            ([0, 0], [0, 2], [0, 1]),
+            ([0, 0], [1, 0], [1, 0]),
+            ([0, 0], [2, 0], [1, 0]),
+            ([0, 0], [0, 0], [0, 0])
+        ]
+
+        for (loc1, loc2, expected) in test_cases:
+            self.assertEqual(terrain.towards(loc1, loc2), expected)
+
     def test_at_location_outside_of_terrain(self):
         terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
         terrain = RobotGameBot.Terrain(terrain_base64)

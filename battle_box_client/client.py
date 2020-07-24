@@ -102,29 +102,6 @@ class Bot:
 class RobotGameBot(Bot):
     DEFAULT_ARENA = "robot-game-default"
 
-    class Terrain:
-        def __init__(self, terrain_base64):
-            terrain = base64.b64decode(terrain_base64)
-            self.rows = terrain[0]
-            self.cols = terrain[1]
-            self.terrain_data = terrain[2:]
-
-        def at_location(self, location):
-            [x, y] = location
-            if (x not in range(self.cols)) or (y not in range(self.rows)):
-                return "inacessible"
-            else:
-                offset = x + (y * self.cols) 
-                terrain_type = self.terrain_data[offset]
-                return {
-                    0: "inacessible",
-                    1: "normal",
-                    2: "spawn"
-                }[terrain_type]
-
-        def __repr__(self):
-            return f"Terrain(rows={self.rows}, cols={self.cols})"
-
     class Robot:
         def __init__(self, robot):
             self.location = robot["location"]
@@ -145,6 +122,56 @@ class RobotGameBot(Bot):
 
         def __repr__(self):
             return f"Robot(id={self.id}, location={self.location}, player_id={self.player_id})"
+
+    class Terrain:
+        def __init__(self, terrain_base64):
+            terrain = base64.b64decode(terrain_base64)
+            self.rows = terrain[0]
+            self.cols = terrain[1]
+            self.terrain_data = terrain[2:]
+
+        def manhattan_distance(self, loc1, loc2):
+            [x1, y1] = loc1
+            [x2, y2] = loc2
+            a_squared = (x2 - x1) ** 2
+            b_squared = (y2 - y1) ** 2
+            return (a_squared + b_squared) ** 0.5
+
+        def towards(self, loc1, loc2):
+            [x1, y1] = loc1
+            [x2, y2] = loc2
+
+            if x1 > x2:
+              return [x1 - 1, y1]
+
+            elif x1 < x2:
+              return [x1 + 1, y1]
+
+            elif y1 > y2:
+              return [x1, y1 - 1]
+
+            elif y1 < y2:
+              return [x1, y1 + 1]
+
+            else:
+              return [x1, y1]
+
+        def at_location(self, location):
+            [x, y] = location
+            if (x not in range(self.cols)) or (y not in range(self.rows)):
+                return "inacessible"
+            else:
+                offset = x + (y * self.cols) 
+                terrain_type = self.terrain_data[offset]
+                return {
+                    0: "inacessible",
+                    1: "normal",
+                    2: "spawn"
+                }[terrain_type]
+
+        def __repr__(self):
+            return f"Terrain(rows={self.rows}, cols={self.cols})"
+
 
     def process_game_request(self, game_request):
         settings = game_request["game_info"]["settings"]
