@@ -45,12 +45,18 @@ class BotTest(unittest.TestCase):
                 }
             }
         ])
-        bot = RobotGameBot(connection=fake_connection)
-        bot.practice()
+        class SomeBotClass(RobotGameBot):
+            NAME = "some-bot-name"
+
+        bot = SomeBotClass(connection=fake_connection, token="some-token", bot="some-bot")
+        bot.practice(arena="some-arena")
         self.assertEqual(fake_connection.sent_messages, [
-            {'action': 'practice', 'arena': 'robot-game-default', 'opponent': {}},
+            {'action': 'practice', 'arena': 'some-arena', 'opponent': {}},
             {'action': 'accept_game', 'game_id': '{some uuid}'}
         ])
+        self.assertEqual(bot.uri, "battleboxs://botskrieg.com:4242")
+        self.assertEqual(bot.token, "some-token")
+        self.assertEqual(bot.bot, "some-bot-name")
 
     def test_practice_match_errors(self):
         practice_errors = [

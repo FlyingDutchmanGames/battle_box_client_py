@@ -11,29 +11,18 @@ class BattleBoxError(Exception):
     pass
 
 # LOAD SETTINGS
-LOAD_KEY_ERROR_MSG = """
-Unable to laod api key, this client support the following ways to load a key
-1.) Passing the BATTLE_BOX_API_KEY environment variable
-2.) Creating a file in the current directory named `./.battle_box` in the following format
-```
-{"botskrieg.com": {"token": "YOUR_TOKEN_HERE"}}
-```
-"""
-
-def load_key(domain):
-    env = os.environ.get('BATTLE_BOX_API_KEY')
+def load_token(domain):
+    env = os.environ.get('BATTLE_BOX_API_TOKEN')
     if env:
         return env
     elif os.path.isfile("./.battle_box"):
         with open("./.battle_box") as file:
             data = file.read()
             return json.loads(data)[domain]["token"]
-    else:
-        raise ValueError(LOAD_KEY_ERROR_MSG)
 
 
 class BattleBoxConnection:
-    def connect(self, uri, key, bot):
+    def connect(self, uri, token, bot):
         parsed_uri = urllib.parse.urlparse(uri)
         self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
 
@@ -41,7 +30,7 @@ class BattleBoxConnection:
             context = ssl.create_default_context()
             self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
 
-        self.send_message({'token': key, "bot": bot})
+        self.send_message({'token': token, "bot": bot})
         connection_msg = self.receive_message()
 
         if connection_msg.get("error"):
@@ -67,10 +56,10 @@ class Bot:
     def __init__(self, **options):
         self.uri = options.get("uri", "battleboxs://botskrieg.com:4242")
         hostname = urllib.parse.urlparse(self.uri).hostname
-        self.key = options.get("token") or load_key(hostname)
+        self.token = options.get("token") or load_token(hostname)
         self.bot = self.NAME
         self.connection = options.get("connection") or BattleBoxConnection()
-        self.connection.connect(self.uri, self.key, self.bot)
+        self.connection.connect(self.uri, self.token, self.bot)
 
     def accept_game(self, game_request):
         game_id = game_request["game_info"]["game_id"]
