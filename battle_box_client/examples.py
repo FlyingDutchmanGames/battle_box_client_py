@@ -15,28 +15,28 @@ class Kansas(RobotGameBot):
         row_midpoint = settings["terrain"].rows // 2
         col_midpoint = settings["terrain"].cols // 2
 
-        moves = []
+        commands = []
 
         for robot in commands_request["my_robots"]:
             [x, y] = robot.location
 
             if y > row_midpoint:
-                moves.append(robot.move([x, y - 1]))
+                commands.append(robot.move([x, y - 1]))
             elif y < row_midpoint:
-                moves.append(robot.move([x, y + 1]))
+                commands.append(robot.move([x, y + 1]))
             elif x > col_midpoint:
-                moves.append(robot.move([x - 1, y]))
+                commands.append(robot.move([x - 1, y]))
             else:
-                moves.append(robot.move([x + 1, y]))
+                commands.append(robot.move([x + 1, y]))
 
-        return moves
+        return commands
 
 
 class HoneyBadger(RobotGameBot):
     NAME = "honey-badger"
 
     def commands(self, commands_request, settings):
-        moves = []
+        commands = []
 
         for robot in commands_request["my_robots"]:
             adjacent_enemies = [
@@ -44,4 +44,15 @@ class HoneyBadger(RobotGameBot):
                 if enemy.location in robot.adjacent_locations
             ]
 
-        return moves
+            if adjacent_enemies:
+                target = adjacent_enemies[0].location
+                command = robot.attack(target)
+            elif commands_request["enemy_robots"]:
+                closest_enemy = min(commands_request["enemy_robots"], key=lambda enemy: robot.manhattan_distance(enemy.location))
+                command = robot.move_towards(closest_enemy.location)
+            else:
+                command = robot.guard()
+
+            commands.append(command)
+
+        return commands

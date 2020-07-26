@@ -137,6 +137,9 @@ class RobotGameBot(Bot):
                 and 0 <= location[1] < self.terrain.rows
             ]
 
+        def manhattan_distance(self, target):
+            return self.terrain.manhattan_distance(self.location, target)
+
         def guard(self):
             return {"type": "guard", "robot_id": self.id}
 
@@ -145,6 +148,10 @@ class RobotGameBot(Bot):
 
         def move(self, target):
             return {"type": "move", "robot_id": self.id, "target": target}
+
+        def move_towards(self, target):
+            target = self.terrain.towards(self.location, target)
+            return self.move(target)
 
         def attack(self, target):
             return {"type": "attack", "robot_id": self.id, "target": target}
