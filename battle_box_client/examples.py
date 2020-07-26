@@ -1,10 +1,12 @@
 from .client import RobotGameBot
 
+
 class Tortuga(RobotGameBot):
     NAME = "tortuga"
 
     def commands(self, commands_request, settings):
         return [robot.guard() for robot in commands_request["my_robots"]]
+
 
 class Kansas(RobotGameBot):
     NAME = "kansas"
@@ -28,6 +30,7 @@ class Kansas(RobotGameBot):
                 moves.append(robot.move([x + 1, y]))
 
         return moves
+
 
 class HoneyBadger(RobotGameBot):
     NAME = "honey-badger"

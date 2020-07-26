@@ -7,10 +7,13 @@ import struct
 import time
 import base64
 
+
 class BattleBoxError(Exception):
     pass
 
 # LOAD SETTINGS
+
+
 def load_token(domain):
     env = os.environ.get('BATTLE_BOX_API_TOKEN')
     if env:
@@ -24,11 +27,13 @@ def load_token(domain):
 class BattleBoxConnection:
     def connect(self, uri, token, bot):
         parsed_uri = urllib.parse.urlparse(uri)
-        self.socket = socket.create_connection((parsed_uri.hostname, parsed_uri.port))
+        self.socket = socket.create_connection(
+            (parsed_uri.hostname, parsed_uri.port))
 
         if parsed_uri.scheme in ["battleboxs", "https"]:
             context = ssl.create_default_context()
-            self.socket = context.wrap_socket(self.socket, server_hostname=parsed_uri.hostname)
+            self.socket = context.wrap_socket(
+                self.socket, server_hostname=parsed_uri.hostname)
 
         self.send_message({'token': token, "bot": bot})
         connection_msg = self.receive_message()
@@ -51,8 +56,9 @@ class BattleBoxConnection:
         message = json.loads(message)
         return message
 
+
 class Bot:
-    NAME="unnamed"
+    NAME = "unnamed"
 
     def __init__(self, **options):
         self.uri = options.get("uri", "battleboxs://botskrieg.com:4242")
@@ -64,7 +70,8 @@ class Bot:
 
     def accept_game(self, game_request):
         game_id = game_request["game_info"]["game_id"]
-        self.connection.send_message({"action": "accept_game", "game_id": game_id})
+        self.connection.send_message(
+            {"action": "accept_game", "game_id": game_id})
 
     def play(self, game_request):
         game_request = self.process_game_request(game_request)
@@ -72,25 +79,30 @@ class Bot:
         while True:
             msg = self.connection.receive_message()
             if msg.get("commands_request"):
-                commands_request = self.process_commands_request(msg["commands_request"])
+                commands_request = self.process_commands_request(
+                    msg["commands_request"])
                 commands = self.commands(commands_request, game_request)
-                self.send_commands(msg["commands_request"]["request_id"], commands)
+                self.send_commands(
+                    msg["commands_request"]["request_id"], commands)
             elif msg.get("error") == "invalid_commands_submission":
-                print("Failed to send commands in time for request_id: {}".format(msg["request_id"]))
+                print(
+                    "Failed to send commands in time for request_id: {}".format(
+                        msg["request_id"]))
             elif msg.get("info"):
                 if msg["info"] == "game_over":
                     print(msg["result"])
 
                 break
 
-
     def send_commands(self, request_id, commands):
-        self.connection.send_message({"action": "send_commands", "request_id": request_id, "commands": commands})
+        self.connection.send_message(
+            {"action": "send_commands", "request_id": request_id, "commands": commands})
 
     def practice(self, **options):
         arena = options.get("arena", self.DEFAULT_ARENA)
         opponent = options.get("opponent", {})
-        self.connection.send_message({"action": "practice", "opponent": opponent, "arena": arena})
+        self.connection.send_message(
+            {"action": "practice", "opponent": opponent, "arena": arena})
         status = self.connection.receive_message()
         if status.get("error"):
             raise BattleBoxError(status["error"])
@@ -157,26 +169,26 @@ class RobotGameBot(Bot):
             [x2, y2] = loc2
 
             if x1 > x2:
-              return [x1 - 1, y1]
+                return [x1 - 1, y1]
 
             elif x1 < x2:
-              return [x1 + 1, y1]
+                return [x1 + 1, y1]
 
             elif y1 > y2:
-              return [x1, y1 - 1]
+                return [x1, y1 - 1]
 
             elif y1 < y2:
-              return [x1, y1 + 1]
+                return [x1, y1 + 1]
 
             else:
-              return [x1, y1]
+                return [x1, y1]
 
         def at_location(self, location):
             [x, y] = location
             if (x not in range(self.cols)) or (y not in range(self.rows)):
                 return "inacessible"
             else:
-                offset = x + (y * self.cols) 
+                offset = x + (y * self.cols)
                 terrain_type = self.terrain_data[offset]
                 return {
                     0: "inacessible",
@@ -187,7 +199,6 @@ class RobotGameBot(Bot):
         def __repr__(self):
             return f"Terrain(rows={self.rows}, cols={self.cols})"
 
-
     def process_game_request(self, game_request):
         settings = game_request["game_info"]["settings"]
         settings["terrain"] = self.Terrain(settings["terrain_base64"])
@@ -196,8 +207,10 @@ class RobotGameBot(Bot):
     def process_commands_request(self, commands_request):
         player = commands_request["player"]
         robots = commands_request["game_state"]["robots"]
-        my_robots = [self.Robot(robot) for robot in robots if robot["player_id"] == player]
-        enemy_robots = [self.Robot(robot) for robot in robots if robot["player_id"] != player]
+        my_robots = [self.Robot(robot)
+                     for robot in robots if robot["player_id"] == player]
+        enemy_robots = [self.Robot(robot)
+                        for robot in robots if robot["player_id"] != player]
         return {
             "player": player,
             "robots": robots,
