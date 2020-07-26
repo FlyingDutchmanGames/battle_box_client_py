@@ -116,7 +116,8 @@ class RobotGameBot(Bot):
     DEFAULT_ARENA = "robot-game-default"
 
     class Robot:
-        def __init__(self, robot):
+        def __init__(self, robot, terrain):
+            self.terrain = terrain
             self.location = robot["location"]
             self.id = robot["id"]
             self.player_id = robot["player_id"]
@@ -132,7 +133,8 @@ class RobotGameBot(Bot):
             ]
             return [
                 location for location in adjacent_locations
-                if location[0] > 0 and location[1] > 0
+                if 0 <= location[0] < self.terrain.cols
+                and 0 <= location[1] < self.terrain.rows
             ]
 
         def guard(self):
@@ -201,15 +203,16 @@ class RobotGameBot(Bot):
 
     def process_game_request(self, game_request):
         settings = game_request["game_info"]["settings"]
-        settings["terrain"] = self.Terrain(settings["terrain_base64"])
+        self.terrain = self.Terrain(settings["terrain_base64"])
+        settings["terrain"] = self.terrain
         return settings
 
     def process_commands_request(self, commands_request):
         player = commands_request["player"]
         robots = commands_request["game_state"]["robots"]
-        my_robots = [self.Robot(robot)
+        my_robots = [self.Robot(robot, self.terrain)
                      for robot in robots if robot["player_id"] == player]
-        enemy_robots = [self.Robot(robot)
+        enemy_robots = [self.Robot(robot, self.terrain)
                         for robot in robots if robot["player_id"] != player]
         return {
             "player": player,

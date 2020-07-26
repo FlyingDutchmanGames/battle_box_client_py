@@ -109,14 +109,42 @@ class BotTest(unittest.TestCase):
 
 class RobotGameRobotTest(unittest.TestCase):
     def test_moves(self):
+        terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
         robot = RobotGameBot.Robot(
-            {"id": 1, "player_id": 1, "location": [1, 1]})
+            {"id": 1, "player_id": 1, "location": [1, 1]}, terrain)
         self.assertEqual({'robot_id': 1, 'type': 'guard'}, robot.guard())
         self.assertEqual({'robot_id': 1, 'type': 'explode'}, robot.explode())
         self.assertEqual({'robot_id': 1, 'target': [
                          1, 1], 'type': 'move'}, robot.move([1, 1]))
         self.assertEqual({'robot_id': 1, 'target': [
                          1, 1], 'type': 'attack'}, robot.attack([1, 1]))
+
+    def test_adjacent_locations(self):
+        # When on a 1x1 board, there are none
+        terrain_base64 = base64.b64encode(bytes([1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        robot = RobotGameBot.Robot(
+            {"id": 1, "player_id": 1, "location": [0, 0]}, terrain)
+        self.assertEqual(robot.adjacent_locations, [])
+        # When in the bottom left corner, doesn't list out of bounds spaces
+        terrain_base64 = base64.b64encode(bytes([2, 2, 1, 1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        robot = RobotGameBot.Robot(
+            {"id": 1, "player_id": 1, "location": [0, 0]}, terrain)
+        self.assertEqual(robot.adjacent_locations, [[1, 0], [0, 1]])
+        # When in the top right corner doesn't list any out of bounds spaces
+        robot = RobotGameBot.Robot(
+            {"id": 1, "player_id": 1, "location": [1, 1]}, terrain)
+        self.assertEqual(robot.adjacent_locations, [[0, 1], [1, 0]])
+        # When in the middle of a large board lists all adjacent spaces
+        terrain_base64 = base64.b64encode(
+            bytes([3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
+        terrain = RobotGameBot.Terrain(terrain_base64)
+        robot = RobotGameBot.Robot(
+            {"id": 1, "player_id": 1, "location": [1, 1]}, terrain)
+        self.assertEqual(robot.adjacent_locations, [
+                         [2, 1], [0, 1], [1, 2], [1, 0]])
 
 
 class RobotGameTerrainTest(unittest.TestCase):
