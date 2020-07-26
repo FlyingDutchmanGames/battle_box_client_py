@@ -28,3 +28,17 @@ class Kansas(RobotGameBot):
                 moves.append(robot.move([x + 1, y]))
 
         return moves
+
+class HoneyBadger(RobotGameBot):
+    NAME = "honey-badger"
+
+    def commands(self, commands_request, settings):
+        moves = []
+
+        for robot in commands_request["my_robots"]:
+            adjacent_enemies = [
+                enemy for enemy in commands_request["enemy_robots"]
+                if enemy.location in robot.adjacent_locations
+            ]
+
+        return moves

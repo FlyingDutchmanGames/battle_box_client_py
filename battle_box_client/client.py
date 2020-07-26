@@ -109,6 +109,20 @@ class RobotGameBot(Bot):
             self.id = robot["id"]
             self.player_id = robot["player_id"]
 
+        @property
+        def adjacent_locations(self):
+            [x, y] = self.location
+            adjacent_locations = [
+                [x + 1, y],
+                [x - 1, y],
+                [x, y + 1],
+                [x, y - 1]
+            ]
+            return [
+                location for location in adjacent_locations
+                if location[0] > 0 and location[1] > 0
+            ]
+
         def guard(self):
             return {"type": "guard", "robot_id": self.id}
 
@@ -191,10 +205,3 @@ class RobotGameBot(Bot):
             "enemy_robots": enemy_robots,
             "turn": commands_request["game_state"]["turn"]
         }
-
-class Tortuga(RobotGameBot):
-    NAME = "tortuga"
-
-    def commands(self, commands_request, settings):
-        return [robot.guard() for robot in commands_request["my_robots"]]
-
