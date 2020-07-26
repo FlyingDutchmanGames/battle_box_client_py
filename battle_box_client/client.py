@@ -37,6 +37,7 @@ class BattleBoxConnection:
             raise ValueError(connection_msg)
         else:
             self.bot_server_id = connection_msg["bot_server_id"]
+            print("Watch your bot here! ", connection_msg["watch"]["bot"])
 
     def send_message(self, msg):
         msg_bytes = str.encode(json.dumps(msg))
