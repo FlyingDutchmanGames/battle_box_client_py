@@ -48,7 +48,10 @@ class HoneyBadger(RobotGameBot):
                 target = adjacent_enemies[0].location
                 command = robot.attack(target)
             elif commands_request["enemy_robots"]:
-                closest_enemy = min(commands_request["enemy_robots"], key=lambda enemy: robot.manhattan_distance(enemy.location))
+                closest_enemy = min(
+                    commands_request["enemy_robots"],
+                    key=lambda enemy: robot.manhattan_distance(
+                        enemy.location))
                 command = robot.move_towards(closest_enemy.location)
             else:
                 command = robot.guard()
