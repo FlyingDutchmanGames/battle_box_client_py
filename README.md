@@ -5,7 +5,7 @@
 ### Installation
 
 ```
-pip3 install battle_box_client
+pip3 install battle-box-client
 ```
 
 ### The Basics

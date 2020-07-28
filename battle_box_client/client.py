@@ -11,9 +11,6 @@ import base64
 class BattleBoxError(Exception):
     pass
 
-# LOAD SETTINGS
-
-
 def load_token(domain):
     env = os.environ.get('BATTLE_BOX_API_TOKEN')
     if env:
