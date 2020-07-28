@@ -93,4 +93,4 @@ robot.guard() # returns a guard command for the robot
 robot.explode() # returns a explode command for the robot
 robot.attack(some_location) # returns an attack command towards the given location, the location must be an adjacent [x, y] coordinate
 robot.move(some_location) # returns a move command towards the given location, the location must be an adjacent [x, y] coordinate
-robot.movee_towards(some_location) # returns a move command towards a given location, does *not* have to be adjacent
+robot.move_towards(some_location) # returns a move command towards a given location, does *not* have to be adjacent
