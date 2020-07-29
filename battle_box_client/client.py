@@ -95,6 +95,18 @@ class Bot:
         self.connection.send_message(
             {"action": "send_commands", "request_id": request_id, "commands": commands})
 
+    def match_make(self, **options):
+        arena = options.get("arena", self.DEFAULT_ARENA)
+        self.connection.send_message(
+            {"action": "start_match_making", "arena": arena})
+        status = self.connection.receive_message()
+        if status.get("error"):
+            raise BattleBoxError(status["error"])
+        assert status["status"] == "match_making"
+        game_request = self.connection.receive_message()
+        self.accept_game(game_request)
+        self.play(game_request)
+
     def practice(self, **options):
         arena = options.get("arena", self.DEFAULT_ARENA)
         opponent = options.get("opponent", {})

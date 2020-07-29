@@ -37,7 +37,15 @@ class MyBot(RobotGameBot):
 # Run your bot
 
 bot = MyBot(token="{PUT YOUR TOKEN HERE (SEE GETTING STARTED GUIDE)}")
-bot.practice()
+
+# Practice Matches
+bot.practice() # Practice with random ai in default arena
+bot.practice(arena="robot-game-default") # Run your bot in a specific arena
+bot.practice(opponent="kansas") # Run your bot against a specific opponent
+
+# Match Make Against Other User's Online Bots
+bot.match_make() # match make in default arena
+bot.match_make(arena="robot-game-default") # Match make in a specific arena
 ```
 
 Once per turn your bot's `commands` method will be called with the `commands_request` and `settings` of the game, your method is expected to return a list of commands you'd like to send to the server
