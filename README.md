@@ -58,8 +58,8 @@ class MyBot(RobotGameBot):
 
   def commands(self, commands_request, settings):
     # commands_request has the following keys
-    # commands_request["player"] <- Your player in this game (Integer)
-    # commands_request["turn"] <- the turn this commands request is for (Integer)
+    # commands_request.player <- Your player in this game (Integer)
+    # commands_request.turn <- the turn this commands request is for (Integer)
     # commands_request["my_robots"] <- Your robots, instances of the RobotGameBot.Robot class
     # commands_request["enemy_robots"] <- Enemy robots, instances of the RobotGameBot.Robot class
 

@@ -5,7 +5,6 @@ import socket
 import ssl
 import struct
 import time
-import base64
 
 
 class BattleBoxError(Exception):
@@ -79,6 +78,7 @@ class Bot:
                 commands_request = self.process_commands_request(
                     msg["commands_request"])
                 commands = self.commands(commands_request, game_request)
+                commands = self.post_process_commands(commands)
                 self.send_commands(
                     msg["commands_request"]["request_id"], commands)
             elif msg.get("error") == "invalid_commands_submission":
@@ -121,119 +121,3 @@ class Bot:
         self.play(game_request)
 
 
-class RobotGameBot(Bot):
-    DEFAULT_ARENA = "robot-game-default"
-
-    class Robot:
-        def __init__(self, robot, terrain):
-            self.terrain = terrain
-            self.location = robot["location"]
-            self.id = robot["id"]
-            self.player_id = robot["player_id"]
-
-        @property
-        def adjacent_locations(self):
-            [x, y] = self.location
-            adjacent_locations = [
-                [x + 1, y],
-                [x - 1, y],
-                [x, y + 1],
-                [x, y - 1]
-            ]
-            return [
-                location for location in adjacent_locations
-                if 0 <= location[0] < self.terrain.cols
-                and 0 <= location[1] < self.terrain.rows
-            ]
-
-        def manhattan_distance(self, target):
-            return self.terrain.manhattan_distance(self.location, target)
-
-        def guard(self):
-            return {"type": "guard", "robot_id": self.id}
-
-        def explode(self):
-            return {"type": "explode", "robot_id": self.id}
-
-        def move(self, target):
-            return {"type": "move", "robot_id": self.id, "target": target}
-
-        def move_towards(self, target):
-            target = self.terrain.towards(self.location, target)
-            return self.move(target)
-
-        def attack(self, target):
-            return {"type": "attack", "robot_id": self.id, "target": target}
-
-        def __repr__(self):
-            return f"Robot(id={self.id}, location={self.location}, player_id={self.player_id})"
-
-    class Terrain:
-        def __init__(self, terrain_base64):
-            terrain = base64.b64decode(terrain_base64)
-            self.rows = terrain[0]
-            self.cols = terrain[1]
-            self.terrain_data = terrain[2:]
-
-        def manhattan_distance(self, loc1, loc2):
-            [x1, y1] = loc1
-            [x2, y2] = loc2
-            a_squared = (x2 - x1) ** 2
-            b_squared = (y2 - y1) ** 2
-            return (a_squared + b_squared) ** 0.5
-
-        def towards(self, loc1, loc2):
-            [x1, y1] = loc1
-            [x2, y2] = loc2
-
-            if x1 > x2:
-                return [x1 - 1, y1]
-
-            elif x1 < x2:
-                return [x1 + 1, y1]
-
-            elif y1 > y2:
-                return [x1, y1 - 1]
-
-            elif y1 < y2:
-                return [x1, y1 + 1]
-
-            else:
-                return [x1, y1]
-
-        def at_location(self, location):
-            [x, y] = location
-            if (x not in range(self.cols)) or (y not in range(self.rows)):
-                return "inacessible"
-            else:
-                offset = x + (y * self.cols)
-                terrain_type = self.terrain_data[offset]
-                return {
-                    0: "inacessible",
-                    1: "normal",
-                    2: "spawn"
-                }[terrain_type]
-
-        def __repr__(self):
-            return f"Terrain(rows={self.rows}, cols={self.cols})"
-
-    def process_game_request(self, game_request):
-        settings = game_request["game_info"]["settings"]
-        self.terrain = self.Terrain(settings["terrain_base64"])
-        settings["terrain"] = self.terrain
-        return settings
-
-    def process_commands_request(self, commands_request):
-        player = commands_request["player"]
-        robots = commands_request["game_state"]["robots"]
-        my_robots = [self.Robot(robot, self.terrain)
-                     for robot in robots if robot["player_id"] == player]
-        enemy_robots = [self.Robot(robot, self.terrain)
-                        for robot in robots if robot["player_id"] != player]
-        return {
-            "player": player,
-            "robots": robots,
-            "my_robots": my_robots,
-            "enemy_robots": enemy_robots,
-            "turn": commands_request["game_state"]["turn"]
-        }
